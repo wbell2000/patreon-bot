@@ -1,0 +1,295 @@
+import json
+import requests
+from bs4 import BeautifulSoup
+import time
+
+# --- HTML Structure Assumptions (to be filled/verified by inspection) ---
+# Tier container selector: e.g., 'div[data-testid="tier-card"]' (This is a guess, common pattern for cards)
+# Tier name selector within container: e.g., 'h2[data-testid="tier-title"], h3[data-testid="tier-title"]' (Guessing h2 or h3 for titles)
+# Tier availability indicators:
+#   - Join button text/selector: e.g., 'button[data-testid="join-button"], a[data-testid="join-button"]' (Guessing button or link for join)
+#   - "Join" or "Select" text within button: Check button's text content.
+#   - Sold out text/selector: e.g., 'span:contains("Sold out"), div:contains("No longer available")' (Guessing common sold out texts)
+#   - Class for disabled/sold out: e.g., 'button[disabled], .sold-out-class' (Common patterns for disabled elements)
+# -------------------------------------------------------------------------
+
+alerted_tiers_cache = {} # Global cache for alerted tiers
+
+def scrape_patreon_page(creator_url: str, user_agent: str):
+    """Fetches a Patreon creator's page, parses it, and extracts tier information.
+
+    Args:
+        creator_url (str): The URL of the Patreon creator's page.
+        user_agent (str): The User-Agent string for the request.
+
+    Returns:
+        list: A list of dictionaries, where each dictionary represents a tier
+              (e.g., {'name': 'Tier Name', 'status': 'available'}).
+              Returns None if a network error occurs or the page cannot be parsed.
+              Returns an empty list if no tiers are found.
+    """
+    headers = {'User-Agent': user_agent}
+    try:
+        response = requests.get(creator_url, headers=headers, timeout=10)
+        response.raise_for_status()  # Raises an HTTPError for bad responses (4XX or 5XX)
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching URL {creator_url}: {e}")
+        return None
+
+    try:
+        soup = BeautifulSoup(response.text, 'html.parser')
+    except Exception as e: # Broad exception for parsing issues
+        print(f"Error parsing HTML from {creator_url}: {e}")
+        return None
+
+    tiers_data = []
+    
+    # Placeholder for actual tier extraction logic based on HTML inspection
+    # For now, let's assume we find tier cards with a specific (guessed) class
+    # and extract name and a placeholder status.
+    
+    # --- GUESSWORK FOR TIER EXTRACTION ---
+    # This part will likely need significant adjustment after actual HTML inspection.
+    # Attempting to find elements that might represent tiers.
+    # Common patterns involve 'div' elements with specific attributes or class names.
+    # Patreon might use data attributes like 'data-testid' or descriptive class names.
+
+    # Guess 1: Look for divs with 'tier' in their class name
+    potential_tier_elements = soup.find_all('div', class_=lambda x: x and 'tier' in x.lower())
+    
+    if not potential_tier_elements:
+        # Guess 2: Look for sections or articles that might contain tier info
+        potential_tier_elements = soup.find_all(['section', 'article'], class_=lambda x: x and 'tier' in x.lower())
+
+    if not potential_tier_elements:
+        # Guess 3: A very generic approach - look for elements with a "join" button,
+        # as tiers usually have one. This is highly speculative.
+        join_buttons = soup.find_all(['button', 'a'], string=lambda text: text and 'join' in text.lower())
+        # Try to get parent elements that might be the tier card
+        potential_tier_elements = [btn.parent.parent for btn in join_buttons] # Go up a couple of levels
+
+
+    for element in potential_tier_elements:
+        tier_name = "N/A"
+        tier_status = "unknown" # Default status
+
+        # Try to find a title (h1-h4) within the potential tier element
+        name_element = element.find(['h1', 'h2', 'h3', 'h4'])
+        if name_element:
+            tier_name = name_element.get_text(strip=True)
+        else:
+            # Fallback: try to find an element with 'title' in its class or data-testid
+            name_element_fallback = element.find(attrs={"data-testid": lambda x: x and "title" in x}) or \
+                                    element.find(class_=lambda x: x and "title" in x)
+            if name_element_fallback:
+                tier_name = name_element_fallback.get_text(strip=True)
+
+
+        # Try to determine availability (very basic guess)
+        join_button = element.find(['button', 'a'], string=lambda t: t and ("join" in t.lower() or "select" in t.lower()))
+        sold_out_text = element.find(string=lambda t: t and ("sold out" in t.lower() or "limit reached" in t.lower()))
+
+        if sold_out_text:
+            tier_status = "sold_out"
+        elif join_button:
+            # Check if button seems disabled (common patterns)
+            if join_button.has_attr('disabled') or 'disabled' in join_button.get('class', []):
+                tier_status = "unavailable" # Could be sold out or just generally unavailable
+            else:
+                tier_status = "available"
+        else:
+            # If no clear join button and no "sold out" text, status remains 'unknown'
+            # or could be considered 'unavailable' if tiers always have a button.
+            tier_status = "unknown" # Or perhaps "unavailable"
+
+        if tier_name != "N/A": # Only add if we found a name
+            tiers_data.append({'name': tier_name, 'status': tier_status})
+            
+    # If after all guesses, no tiers_data, try a very broad search for anything that looks like a price
+    if not tiers_data:
+        price_elements = soup.find_all(string=lambda text: text and '$' in text and any(char.isdigit() for char in text))
+        for price_el in price_elements:
+            # This is highly speculative and might not be a tier name
+            # Try to find a heading nearby as a potential name
+            parent_for_name = price_el.parent.parent or price_el.parent
+            name_el = parent_for_name.find(['h1','h2','h3','h4'])
+            tier_name_guess = name_el.get_text(strip=True) if name_el else f"Tier near {price_el.get_text(strip=True)}"
+            tiers_data.append({'name': tier_name_guess, 'status': 'unknown_price_based'})
+
+
+    return tiers_data
+
+
+def check_tiers(scraped_tiers: list, creator_config: dict, alerted_tiers_cache: dict) -> list:
+    """Checks scraped tiers against watched tiers and manages alert state.
+
+    Args:
+        scraped_tiers (list): List of tier dicts from scrape_patreon_page.
+        creator_config (dict): Configuration for a single creator.
+        alerted_tiers_cache (dict): Global cache for tracking alerted tiers.
+
+    Returns:
+        list: A list of newly available tiers that require alerting.
+    """
+    newly_available_alerts = []
+    creator_name = creator_config['name']
+    tiers_to_watch = creator_config.get('tiers_to_watch', []) # Ensure it's a list
+
+    # Normalize scraped tier names for easier lookup (optional, but good for robustness)
+    # And create a quick lookup map
+    scraped_tiers_map = {tier.get('name', '').lower(): tier for tier in scraped_tiers}
+
+    for tier_to_watch_name in tiers_to_watch:
+        cache_key = f"{creator_name}_{tier_to_watch_name}"
+        
+        # Search for the tier_to_watch_name in scraped_tiers (case-insensitive)
+        found_tier_info = scraped_tiers_map.get(tier_to_watch_name.lower())
+
+        if found_tier_info:
+            # Tier is found, check its status
+            # Assuming 'available' is the status for an open tier.
+            # This needs to be consistent with scrape_patreon_page's output.
+            is_available = found_tier_info.get('status') == 'available'
+
+            if is_available:
+                if not alerted_tiers_cache.get(cache_key): # If not alerted before (or was False)
+                    newly_available_alerts.append({
+                        'creator_name': creator_name,
+                        'tier_name': tier_to_watch_name, # Use original casing for alert
+                        'url': creator_config['url']
+                    })
+                    alerted_tiers_cache[cache_key] = True
+                    print(f"DEBUG: Tier '{tier_to_watch_name}' for {creator_name} is AVAILABLE. Added to alerts. Cache: {alerted_tiers_cache}")
+                else:
+                    print(f"DEBUG: Tier '{tier_to_watch_name}' for {creator_name} is available but already alerted. Cache: {alerted_tiers_cache}")
+            else: # Tier found but not available
+                if alerted_tiers_cache.get(cache_key): # Was previously alerted
+                    print(f"DEBUG: Tier '{tier_to_watch_name}' for {creator_name} is NO LONGER available. Resetting cache. Cache before: {alerted_tiers_cache}")
+                    alerted_tiers_cache[cache_key] = False
+                else:
+                    print(f"DEBUG: Tier '{tier_to_watch_name}' for {creator_name} is not available and was not alerted. Cache: {alerted_tiers_cache}")
+        else:
+            # Tier to watch is not found in scraped tiers
+            if alerted_tiers_cache.get(cache_key): # Was previously alerted (and thus available)
+                print(f"DEBUG: Tier '{tier_to_watch_name}' for {creator_name} was NOT FOUND (previously available). Resetting cache. Cache before: {alerted_tiers_cache}")
+                alerted_tiers_cache[cache_key] = False
+            else:
+                print(f"DEBUG: Tier '{tier_to_watch_name}' for {creator_name} was not found and not alerted. Cache: {alerted_tiers_cache}")
+                
+    return newly_available_alerts
+
+
+def send_alerts(alerts_to_send: list):
+    """Prints alert messages to the console for newly available tiers.
+
+    Args:
+        alerts_to_send (list): A list of alert dictionaries.
+    """
+    if not alerts_to_send:
+        print("No new tier availabilities to report.")
+        return
+
+    print("\n--- !!! NEW TIER ALERTS !!! ---")
+    for alert in alerts_to_send:
+        print(f"ALERT: Tier \"{alert['tier_name']}\" for creator \"{alert['creator_name']}\" is now available! Check at: {alert['url']}")
+    print("--- !!! END OF ALERTS !!! ---")
+
+
+def main():
+    """Main function to run the Patreon Tier Alerter bot."""
+    print("Starting Patreon Tier Alerter...")
+
+    # Adjust config path assuming script is run from project root (e.g. python src/alerter.py)
+    # If run from src/ directory, path should be '../config/config.json'
+    # For Docker, running from root is common. Let's assume 'config/config.json'
+    # and if it fails, suggest the alternative.
+    config_path_primary = "config/config.json"
+    config_path_secondary = "../config/config.json" # For running directly from src
+    
+    config = load_config(config_path_primary)
+    if config is None:
+        print(f"Attempting to load config from alternative path: {config_path_secondary}")
+        config = load_config(config_path_secondary)
+
+    if config is None:
+        print("Error: Configuration could not be loaded. Exiting.")
+        return
+
+    creators_to_monitor = config.get('creators', [])
+    check_interval_seconds = config.get('check_interval_seconds', 3600)
+    user_agent = config.get('user_agent', 'Patreon Tier Alerter Bot/1.0')
+
+    if not creators_to_monitor:
+        print("No creators configured to monitor. Please check your config.json. Exiting.")
+        return
+
+    # alerted_tiers_cache is already global, so it's implicitly used by check_tiers
+
+    print(f"Configuration loaded. Monitoring {len(creators_to_monitor)} creator(s).")
+    print(f"Check interval: {check_interval_seconds} seconds.")
+    print(f"User-Agent: {user_agent}")
+
+    while True:
+        print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting new check cycle...")
+        
+        for creator_config in creators_to_monitor:
+            creator_name = creator_config.get('name', 'Unknown Creator')
+            creator_url = creator_config.get('url')
+
+            if not creator_url:
+                print(f"Skipping creator '{creator_name}' due to missing URL.")
+                continue
+
+            print(f"Checking creator: {creator_name} at {creator_url}")
+            
+            scraped_tiers = None
+            try:
+                scraped_tiers = scrape_patreon_page(creator_url, user_agent)
+            except Exception as e:
+                print(f"An unexpected error occurred during scraping for {creator_name}: {e}")
+                # Continue to the next creator even if one fails catastrophically during scrape function
+                time.sleep(5) # Still sleep before next creator
+                continue
+
+            if scraped_tiers is None:
+                print(f"Scraping failed for {creator_name} (returned None). Skipping tier check for this creator.")
+            else:
+                print(f"Successfully scraped {len(scraped_tiers)} tier(s) for {creator_name}.")
+                newly_available_alerts = check_tiers(scraped_tiers, creator_config, alerted_tiers_cache)
+                send_alerts(newly_available_alerts)
+            
+            # Polite delay between requests to different creators
+            print(f"Waiting 5 seconds before next creator...")
+            time.sleep(5) 
+
+        print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Check cycle complete.")
+        print(f"Next check in {check_interval_seconds // 60} minutes (at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + check_interval_seconds))}).")
+        time.sleep(check_interval_seconds)
+
+
+def load_config(config_path="config/config.json"):
+    """Loads the configuration from a JSON file.
+
+    Args:
+        config_path (str): The path to the configuration file.
+
+    Returns:
+        dict: The parsed configuration, or None if an error occurred.
+    """
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        return config
+    except FileNotFoundError:
+        print(f"Error: Configuration file not found at {config_path}")
+        return None
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in configuration file at {config_path}")
+        return None
+
+if __name__ == '__main__':
+    # Adjusted path for running from src directory
+    config = load_config('../config/config.json')
+    # Remove or comment out all the previous test code.
+    # The if __name__ == '__main__': block should now simply call main().
+    main()
