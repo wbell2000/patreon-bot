@@ -2,6 +2,8 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import time
+import boto3
+import os
 
 # --- HTML Structure Assumptions (to be filled/verified by inspection) ---
 # Tier container selector: e.g., 'div[data-testid="tier-card"]' (This is a guess, common pattern for cards)
@@ -132,20 +134,76 @@ def check_tiers(scraped_tiers: list, creator_config: dict, alerted_tiers_cache: 
     return newly_available_alerts
 
 
-def send_alerts(alerts_to_send: list):
-    """Prints alert messages to the console for newly available tiers.
+def send_alerts(alerts_to_send: list, sms_config: dict = None):
+    """Prints alert messages to the console and sends SMS if configured.
 
     Args:
         alerts_to_send (list): A list of alert dictionaries.
+        sms_config (dict, optional): Configuration for SMS sending. Defaults to None.
     """
     if not alerts_to_send:
         print("No new tier availabilities to report.")
         return
 
+    # Print to console
     print("\n--- !!! NEW TIER ALERTS !!! ---")
     for alert in alerts_to_send:
         print(f"ALERT: Tier \"{alert['tier_name']}\" for creator \"{alert['creator_name']}\" is now available! Check at: {alert['url']}")
     print("--- !!! END OF ALERTS !!! ---")
+
+    # Send SMS if configured
+    if sms_config and sms_config.get("provider") == "aws_sns":
+        print("\n--- Attempting to send SMS alerts via AWS SNS ---")
+        aws_access_key_id = sms_config.get("aws_access_key_id")
+        aws_secret_access_key = sms_config.get("aws_secret_access_key")
+        aws_region = sms_config.get("aws_region")
+        recipient_phone_number = sms_config.get("recipient_phone_number")
+
+        if not all([aws_access_key_id, aws_secret_access_key, aws_region, recipient_phone_number]):
+            print("Warning: SMS configuration for AWS SNS is incomplete. Missing one or more of: Access Key ID, Secret Access Key, Region, or Recipient Phone Number. Cannot send SMS.")
+            # Replace placeholder values with a more specific warning.
+            if "YOUR_AWS_ACCESS_KEY_ID" in [aws_access_key_id, aws_secret_access_key, aws_region, recipient_phone_number]:
+                 print("Warning: SMS configuration contains placeholder values. Please update your config.json.")
+            return
+
+        try:
+            sns_client = boto3.client(
+                "sns",
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+                region_name=aws_region
+            )
+        except Exception as e:
+            print(f"Error initializing AWS SNS client: {e}")
+            return
+
+        for alert in alerts_to_send:
+            message = f"Patreon Alert: Tier '{alert['tier_name']}' for creator '{alert['creator_name']}' is now available! Check at: {alert['url']}"
+            # Truncate message if it's too long for SNS (max 1600 chars, but SMS itself is shorter)
+            # Standard GSM-7 SMS is 160 chars, UTF-8 is 70 chars.
+            # Let's aim for a reasonable limit, e.g. 320 chars (2 SMS segments)
+            if len(message) > 320: 
+                message = message[:317] + "..."
+
+            try:
+                response = sns_client.publish(
+                    PhoneNumber=recipient_phone_number,
+                    Message=message,
+                    MessageAttributes={
+                        'AWS.SNS.SMS.SMSType': {
+                            'DataType': 'String',
+                            'StringValue': 'Transactional'
+                        }
+                    }
+                )
+                print(f"SMS sent for tier '{alert['tier_name']}' to {recipient_phone_number}! Message ID: {response.get('MessageId')}")
+            except Exception as e:
+                print(f"Error sending SMS for tier '{alert['tier_name']}': {e}")
+        print("--- SMS Sending Process Complete ---")
+    elif sms_config:
+        print(f"SMS provider '{sms_config.get('provider')}' is configured but not supported. No SMS will be sent.")
+    else:
+        print("SMS configuration not provided. Skipping SMS alerts.")
 
 
 def main():
@@ -174,10 +232,17 @@ def main():
         return
 
     # alerted_tiers_cache is already global, so it's implicitly used by check_tiers
+    sms_settings_from_config = config.get('sms_settings')
 
     print(f"Configuration loaded. Monitoring {len(creators_to_monitor)} creator(s).")
     print(f"Check interval: {check_interval_seconds} seconds.")
     print(f"User-Agent: {user_agent}")
+    if sms_settings_from_config and sms_settings_from_config.get('provider'):
+        print(f"SMS alerts configured via: {sms_settings_from_config.get('provider')}")
+        if "YOUR_AWS_ACCESS_KEY_ID" in [sms_settings_from_config.get("aws_access_key_id", ""), sms_settings_from_config.get("aws_secret_access_key", ""), sms_settings_from_config.get("aws_region", ""), sms_settings_from_config.get("recipient_phone_number", "")]:
+            print("WARNING: SMS configuration contains placeholder values. SMS sending may fail until these are updated in config.json.")
+    else:
+        print("SMS alerts not configured or provider not specified.")
 
     while True:
         print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Starting new check cycle...")
@@ -206,7 +271,7 @@ def main():
             else:
                 print(f"Successfully scraped {len(scraped_tiers)} tier(s) for {creator_name}.")
                 newly_available_alerts = check_tiers(scraped_tiers, creator_config, alerted_tiers_cache)
-                send_alerts(newly_available_alerts)
+                send_alerts(newly_available_alerts, sms_config=sms_settings_from_config)
             
             # Polite delay between requests to different creators
             print(f"Waiting 5 seconds before next creator...")

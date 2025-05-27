@@ -15,6 +15,21 @@ The Patreon Tier Alerter Bot is a Python application designed to monitor Patreon
 ## Prerequisites
 
 *   **Docker:** You must have Docker installed on your system to build and run this application. Visit [docker.com](https://www.docker.com/get-started) for installation instructions.
+*   **Python and Pip:** Ensure you have Python 3 and pip installed.
+
+## Installation
+
+1.  **Clone the repository (if you haven't already):**
+    ```bash
+    git clone <repository-url>
+    cd patreon-tier-alerter
+    ```
+
+2.  **Install dependencies:**
+    Install the required Python packages using pip:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ## Setup and Configuration
 
@@ -53,6 +68,51 @@ You need to edit this file to tell the bot which creators and tiers to monitor. 
 *   `user_agent` (string): The User-Agent string the bot will use when making HTTP requests to Patreon. It's good practice to customize this with your contact information or project purpose, e.g., `"Patreon Tier Alerter Bot/1.0 (yourname@example.com/PersonalUse)"`.
 
 **Note:** The application was initialized with a sample `config/config.json`. You should edit this file directly with your desired configuration.
+
+## SMS Alert Configuration
+
+The bot supports sending SMS alerts via AWS Simple Notification Service (SNS) when a desired tier becomes available. To enable SMS alerts, you need to configure the `sms_settings` section in the `config/config.json` file.
+
+```json
+{
+  // ... other configurations ...
+  "sms_settings": {
+    "provider": "aws_sns",
+    "aws_access_key_id": "YOUR_AWS_ACCESS_KEY_ID",
+    "aws_secret_access_key": "YOUR_AWS_SECRET_ACCESS_KEY",
+    "aws_region": "YOUR_AWS_REGION (e.g., us-east-1)",
+    "recipient_phone_number": "YOUR_RECIPIENT_PHONE_NUMBER (e.g., +11234567890)"
+  }
+}
+```
+
+**Field Explanations:**
+
+*   `provider` (string): Specifies the SMS provider. Currently, only `"aws_sns"` is supported. This tells the bot to use AWS SNS for sending SMS messages.
+*   `aws_access_key_id` (string): Your AWS Access Key ID. This is part of the credentials for an AWS IAM (Identity and Access Management) user. You can generate these credentials in the AWS Management Console under IAM.
+*   `aws_secret_access_key` (string): Your AWS Secret Access Key. This is the other part of the credentials for an AWS IAM user. It's shown only once when you create an access key pair, so store it securely.
+*   `aws_region` (string): The AWS region where your SNS service is configured (e.g., "us-east-1", "eu-west-2"). This is necessary for the AWS SDK to send requests to the correct regional endpoint.
+*   `recipient_phone_number` (string): The phone number to which the SMS alerts will be sent. It should be in E.164 format (e.g., `+11234567890`).
+
+**IMPORTANT:** Storing AWS credentials directly in `config.json` is convenient for personal use but is not recommended for production or shared environments. For better security, consider using environment variables or AWS IAM roles if deploying this script in an AWS environment.
+
+### Testing SMS Alerts
+
+After configuring your SMS settings (especially for AWS SNS):
+
+1.  **Ensure Credentials are Correct:** Double-check your `aws_access_key_id`, `aws_secret_access_key`, `aws_region`, and `recipient_phone_number` in `config/config.json`. Ensure they are not placeholders.
+2.  **Valid Recipient Number:** Make sure the `recipient_phone_number` is a valid phone number in E.164 format (e.g., `+11234567890`) that can receive SMS messages.
+3.  **Trigger an Alert:**
+    *   The easiest way to test is to temporarily modify your `config/config.json` to watch for a tier that you know is currently available on a Patreon page you are monitoring.
+    *   Alternatively, you can adjust the `alerted_tiers_cache` logic in `alerter.py` for a one-time test if you are comfortable modifying the code (not recommended for normal use).
+    *   Run the script: `python patreon_tier_alerter/src/alerter.py`
+4.  **Check Console Output:** Look for messages indicating that an SMS was attempted (e.g., "SMS sent for tier..." or any error messages like "Error sending SMS...").
+5.  **Check Your Phone:** Verify if you received the SMS message.
+6.  **Troubleshooting:**
+    *   If you don't receive an SMS, check the console output for errors from AWS SNS.
+    *   Ensure the IAM user associated with your AWS credentials has the necessary permissions to publish to SNS (e.g., `sns:Publish`).
+    *   Check your AWS SNS console for any delivery logs or errors for the message.
+    *   Some regions or countries might have specific requirements for sending SMS (e.g., pre-registering sender IDs). For personal use to your own number, this is often less of an issue, but be aware of it if messages fail to deliver.
 
 ## How to Run (Using Docker)
 
