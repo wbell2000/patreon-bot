@@ -44,78 +44,31 @@ def scrape_patreon_page(creator_url: str, user_agent: str):
 
     tiers_data = []
     
-    # Placeholder for actual tier extraction logic based on HTML inspection
-    # For now, let's assume we find tier cards with a specific (guessed) class
-    # and extract name and a placeholder status.
+    # Look for tier buttons with the specific data-tag attribute
+    tier_buttons = soup.find_all('a', attrs={'data-tag': 'patron-checkout-continue-button'})
     
-    # --- GUESSWORK FOR TIER EXTRACTION ---
-    # This part will likely need significant adjustment after actual HTML inspection.
-    # Attempting to find elements that might represent tiers.
-    # Common patterns involve 'div' elements with specific attributes or class names.
-    # Patreon might use data attributes like 'data-testid' or descriptive class names.
-
-    # Guess 1: Look for divs with 'tier' in their class name
-    potential_tier_elements = soup.find_all('div', class_=lambda x: x and 'tier' in x.lower())
-    
-    if not potential_tier_elements:
-        # Guess 2: Look for sections or articles that might contain tier info
-        potential_tier_elements = soup.find_all(['section', 'article'], class_=lambda x: x and 'tier' in x.lower())
-
-    if not potential_tier_elements:
-        # Guess 3: A very generic approach - look for elements with a "join" button,
-        # as tiers usually have one. This is highly speculative.
-        join_buttons = soup.find_all(['button', 'a'], string=lambda text: text and 'join' in text.lower())
-        # Try to get parent elements that might be the tier card
-        potential_tier_elements = [btn.parent.parent for btn in join_buttons] # Go up a couple of levels
-
-
-    for element in potential_tier_elements:
-        tier_name = "N/A"
-        tier_status = "unknown" # Default status
-
-        # Try to find a title (h1-h4) within the potential tier element
-        name_element = element.find(['h1', 'h2', 'h3', 'h4'])
-        if name_element:
-            tier_name = name_element.get_text(strip=True)
-        else:
-            # Fallback: try to find an element with 'title' in its class or data-testid
-            name_element_fallback = element.find(attrs={"data-testid": lambda x: x and "title" in x}) or \
-                                    element.find(class_=lambda x: x and "title" in x)
-            if name_element_fallback:
-                tier_name = name_element_fallback.get_text(strip=True)
-
-
-        # Try to determine availability (very basic guess)
-        join_button = element.find(['button', 'a'], string=lambda t: t and ("join" in t.lower() or "select" in t.lower()))
-        sold_out_text = element.find(string=lambda t: t and ("sold out" in t.lower() or "limit reached" in t.lower()))
-
-        if sold_out_text:
-            tier_status = "sold_out"
-        elif join_button:
-            # Check if button seems disabled (common patterns)
-            if join_button.has_attr('disabled') or 'disabled' in join_button.get('class', []):
-                tier_status = "unavailable" # Could be sold out or just generally unavailable
-            else:
-                tier_status = "available"
-        else:
-            # If no clear join button and no "sold out" text, status remains 'unknown'
-            # or could be considered 'unavailable' if tiers always have a button.
-            tier_status = "unknown" # Or perhaps "unavailable"
-
-        if tier_name != "N/A": # Only add if we found a name
-            tiers_data.append({'name': tier_name, 'status': tier_status})
+    for button in tier_buttons:
+        # Extract tier name from aria-label (format: "TIER_NAME Join" or "TIER_NAME Sold Out")
+        aria_label = button.get('aria-label', '')
+        if not aria_label:
+            continue
             
-    # If after all guesses, no tiers_data, try a very broad search for anything that looks like a price
-    if not tiers_data:
-        price_elements = soup.find_all(string=lambda text: text and '$' in text and any(char.isdigit() for char in text))
-        for price_el in price_elements:
-            # This is highly speculative and might not be a tier name
-            # Try to find a heading nearby as a potential name
-            parent_for_name = price_el.parent.parent or price_el.parent
-            name_el = parent_for_name.find(['h1','h2','h3','h4'])
-            tier_name_guess = name_el.get_text(strip=True) if name_el else f"Tier near {price_el.get_text(strip=True)}"
-            tiers_data.append({'name': tier_name_guess, 'status': 'unknown_price_based'})
-
+        # Split on the last space to separate tier name from status
+        tier_name = ' '.join(aria_label.split()[:-1])
+        
+        # Determine status based on aria-disabled and button text
+        is_disabled = button.get('aria-disabled') == 'true'
+        button_text = button.find('div', class_='cm-oHFIQB').get_text(strip=True) if button.find('div', class_='cm-oHFIQB') else ''
+        
+        if is_disabled or button_text == 'Sold Out':
+            tier_status = 'sold_out'
+        elif button_text == 'Join':
+            tier_status = 'available'
+        else:
+            tier_status = 'unknown'
+            
+        if tier_name:  # Only add if we found a name
+            tiers_data.append({'name': tier_name, 'status': tier_status})
 
     return tiers_data
 
@@ -199,12 +152,9 @@ def main():
     """Main function to run the Patreon Tier Alerter bot."""
     print("Starting Patreon Tier Alerter...")
 
-    # Adjust config path assuming script is run from project root (e.g. python src/alerter.py)
-    # If run from src/ directory, path should be '../config/config.json'
-    # For Docker, running from root is common. Let's assume 'config/config.json'
-    # and if it fails, suggest the alternative.
-    config_path_primary = "config/config.json"
-    config_path_secondary = "../config/config.json" # For running directly from src
+    # Update these paths to point to the correct location
+    config_path_primary = "patreon_tier_alerter/config/config.json"
+    config_path_secondary = "../patreon_tier_alerter/config/config.json" # For running directly from src
     
     config = load_config(config_path_primary)
     if config is None:
