@@ -1,16 +1,21 @@
 {
   "creators": [
     {
-      "name": "TestCreator1",
-      "url": "https://www.patreon.com/ReplaceWithRealCreatorPageName1",
-      "tiers_to_watch": ["TierName1", "TierName2"]
+      "name": "Drums and Drams",
+      "url": "https://www.patreon.com/c/drumsanddrams/membership",
+      "tiers_to_watch": ["MICROBATCHES", "WHISKEY DRUMMERS"]
     },
     {
-      "name": "TestCreator2",
-      "url": "https://www.patreon.com/ReplaceWithRealCreatorPageName2",
-      "tiers_to_watch": ["AnotherTier"]
+      "name": "Rare Bird 101",
+      "url": "https://www.patreon.com/c/rarebird101/membership",
+      "tiers_to_watch": ["Master Supporter", "Beyond Duplication", "Bourbon Buddha", "The Mighty Gobble"]
+    },
+    {
+      "name": "Bourbon Junkies",
+      "url": "https://www.patreon.com/c/bourbonjunkies/membership",
+      "tiers_to_watch": ["Bourbon Junkie Alpha", "Bourbon Demi-Junkie", "Bourbon God", "Bourbon Addict"]
     }
   ],
-  "check_interval_seconds": 3600,
-  "user_agent": "Patreon Tier Alerter Bot/1.0"
+  "check_interval_seconds": 600,
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
