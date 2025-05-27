@@ -1,0 +1,16 @@
+{
+  "creators": [
+    {
+      "name": "TestCreator1",
+      "url": "https://www.patreon.com/ReplaceWithRealCreatorPageName1",
+      "tiers_to_watch": ["TierName1", "TierName2"]
+    },
+    {
+      "name": "TestCreator2",
+      "url": "https://www.patreon.com/ReplaceWithRealCreatorPageName2",
+      "tiers_to_watch": ["AnotherTier"]
+    }
+  ],
+  "check_interval_seconds": 3600,
+  "user_agent": "Patreon Tier Alerter Bot/1.0"
+}
