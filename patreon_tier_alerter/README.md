@@ -73,7 +73,7 @@ You need to edit this file to tell the bot which creators and tiers to monitor. 
 
 ## SMS Alert Configuration
 
-The bot supports sending SMS alerts via AWS Simple Notification Service (SNS) when a desired tier becomes available. To enable SMS alerts, you need to configure the `sms_settings` section in the `config/config.json` file.
+The bot supports sending SMS alerts via AWS Simple Notification Service (SNS) or Twilio when a desired tier becomes available. To enable SMS alerts, you need to configure the `sms_settings` section in the `config/config.json` file.
 
 ```json
 {
@@ -88,13 +88,29 @@ The bot supports sending SMS alerts via AWS Simple Notification Service (SNS) wh
 }
 ```
 
+To use Twilio instead of AWS SNS:
+
+```json
+{
+  "sms_settings": {
+    "provider": "twilio",
+    "twilio_account_sid": "YOUR_TWILIO_ACCOUNT_SID",
+    "twilio_auth_token": "YOUR_TWILIO_AUTH_TOKEN",
+    "twilio_from_number": "+15551234567",
+    "recipient_phone_number": "+15557654321"
+  }
+}
+```
+
 **Field Explanations:**
 
-*   `provider` (string): Specifies the SMS provider. Currently, only `"aws_sns"` is supported. This tells the bot to use AWS SNS for sending SMS messages.
+*   `provider` (string): Specifies the SMS provider. Supported options are `"aws_sns"` and `"twilio"`.
 *   `aws_access_key_id` (string): Your AWS Access Key ID. This is part of the credentials for an AWS IAM (Identity and Access Management) user. You can generate these credentials in the AWS Management Console under IAM.
 *   `aws_secret_access_key` (string): Your AWS Secret Access Key. This is the other part of the credentials for an AWS IAM user. It's shown only once when you create an access key pair, so store it securely.
 *   `aws_region` (string): The AWS region where your SNS service is configured (e.g., "us-east-1", "eu-west-2"). This is necessary for the AWS SDK to send requests to the correct regional endpoint.
 *   `recipient_phone_number` (string): The phone number to which the SMS alerts will be sent. It should be in E.164 format (e.g., `+11234567890`).
+*   `twilio_account_sid` / `twilio_auth_token` (strings, Twilio only): Your Twilio API credentials.
+*   `twilio_from_number` (string, Twilio only): The Twilio phone number to send messages from.
 
 **IMPORTANT:** Storing AWS credentials directly in `config.json` is convenient for personal use but is not recommended for production or shared environments. For better security, consider using environment variables or AWS IAM roles if deploying this script in an AWS environment.
 
