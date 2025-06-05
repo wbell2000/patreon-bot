@@ -2,3 +2,5 @@ requests
 beautifulsoup4
 boto3
 pytest
+httpx
+pytest-asyncio
