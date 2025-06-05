@@ -171,6 +171,20 @@ The bot operates by:
 6.  If a watched tier becomes available and hasn't been alerted for recently, it prints an alert to the console.
 7.  Sleeping for the configured `check_interval_seconds` before repeating the process.
 
+## Deploying to Cloudflare Workers
+
+An experimental Cloudflare Worker is included for running the tier checker
+without managing your own server. You will need the [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) installed.
+
+1.  Edit or provide a JSON configuration via the `CONFIG_JSON` environment variable or store it in a KV namespace named `KV_CONFIG` under the key `config`.
+2.  Set SMS credentials (e.g. `SMS_API_URL`, `SMS_API_TOKEN` and `RECIPIENT_PHONE_NUMBER`) as Worker environment variables.
+3.  Deploy with:
+    ```bash
+    wrangler publish
+    ```
+
+The Worker uses an async HTTP client compatible with the runtime and cannot read local files. AWS SNS via `boto3` is **not** available; SMS must be sent through an HTTP API. At this time only basic scraping and alerting are supported.
+
 ## Important Notes / Limitations
 
 *   **Web Scraping Reliance:** This bot relies on web scraping the structure of Patreon pages. **If Patreon significantly changes its website layout, the bot's ability to find tier information may break.** The HTML selectors used for scraping are based on observations at the time of writing and might need updates if issues arise.
