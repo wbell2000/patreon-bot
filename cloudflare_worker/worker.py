@@ -1,6 +1,17 @@
 import json
-import httpx
 from html.parser import HTMLParser
+
+# Python workers run on Pyodide, which does not include third-party packages by
+# default. Patch HTTP libraries like `httpx` to use the runtime's fetch API if
+# available.
+try:  # noqa: E402 - ensure patching before importing httpx
+    import pyodide_http
+
+    pyodide_http.patch_all()
+except Exception:  # pragma: no cover - patching is best-effort
+    pass
+
+import httpx
 from patreon_tier_alerter.src.alerter import check_tiers
 
 # Global cache used across invocations
