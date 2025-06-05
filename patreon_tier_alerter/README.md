@@ -167,7 +167,7 @@ To see the bot's output, including alerts and status messages:
 The bot operates by:
 1.  Loading the configuration from `config/config.json`.
 2.  Periodically making HTTP requests to the specified Patreon creator URLs using the `requests` library.
-3.  Parsing the HTML content of these pages using `BeautifulSoup`.
+3.  Parsing the HTML content of these pages using Python's built-in HTML parser.
 4.  Attempting to identify tier elements, their names, and their availability status based on predefined (and somewhat guessed) HTML selectors.
 5.  Comparing the found available tiers against the `tiers_to_watch` list in the configuration.
 6.  If a watched tier becomes available and hasn't been alerted for recently, it prints an alert to the console.

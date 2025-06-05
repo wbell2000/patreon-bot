@@ -1,6 +1,6 @@
 import json
 import requests
-from bs4 import BeautifulSoup
+from html.parser import HTMLParser
 import time
 import boto3
 import os
@@ -38,41 +38,52 @@ def scrape_patreon_page(creator_url: str, user_agent: str):
         print(f"Error fetching URL {creator_url}: {e}")
         return None
 
+    class TierParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.tiers = []
+            self.current = None
+            self.in_btn_div = False
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == 'a' and attrs.get('data-tag') == 'patron-checkout-continue-button':
+                aria_label = attrs.get('aria-label', '')
+                if not aria_label:
+                    return
+                tier_name = ' '.join(aria_label.split()[:-1])
+                disabled = attrs.get('aria-disabled') == 'true'
+                self.current = {'name': tier_name, 'disabled': disabled, 'button': ''}
+            elif self.current and tag == 'div' and attrs.get('class') == 'cm-oHFIQB':
+                self.in_btn_div = True
+
+        def handle_data(self, data):
+            if self.current and self.in_btn_div:
+                self.current['button'] += data.strip()
+
+        def handle_endtag(self, tag):
+            if tag == 'div' and self.in_btn_div:
+                self.in_btn_div = False
+            elif tag == 'a' and self.current:
+                text = self.current.get('button', '')
+                if self.current['disabled'] or text == 'Sold Out':
+                    status = 'sold_out'
+                elif text == 'Join':
+                    status = 'available'
+                else:
+                    status = 'unknown'
+                if self.current['name']:
+                    self.tiers.append({'name': self.current['name'], 'status': status})
+                self.current = None
+
+    parser = TierParser()
     try:
-        soup = BeautifulSoup(response.text, 'html.parser')
-    except Exception as e: # Broad exception for parsing issues
+        parser.feed(response.text)
+    except Exception as e:  # Broad exception for parsing issues
         print(f"Error parsing HTML from {creator_url}: {e}")
         return None
 
-    tiers_data = []
-    
-    # Look for tier buttons with the specific data-tag attribute
-    tier_buttons = soup.find_all('a', attrs={'data-tag': 'patron-checkout-continue-button'})
-    
-    for button in tier_buttons:
-        # Extract tier name from aria-label (format: "TIER_NAME Join" or "TIER_NAME Sold Out")
-        aria_label = button.get('aria-label', '')
-        if not aria_label:
-            continue
-            
-        # Split on the last space to separate tier name from status
-        tier_name = ' '.join(aria_label.split()[:-1])
-        
-        # Determine status based on aria-disabled and button text
-        is_disabled = button.get('aria-disabled') == 'true'
-        button_text = button.find('div', class_='cm-oHFIQB').get_text(strip=True) if button.find('div', class_='cm-oHFIQB') else ''
-        
-        if is_disabled or button_text == 'Sold Out':
-            tier_status = 'sold_out'
-        elif button_text == 'Join':
-            tier_status = 'available'
-        else:
-            tier_status = 'unknown'
-            
-        if tier_name:  # Only add if we found a name
-            tiers_data.append({'name': tier_name, 'status': tier_status})
-
-    return tiers_data
+    return parser.tiers
 
 
 def check_tiers(scraped_tiers: list, creator_config: dict, alerted_tiers_cache: dict) -> list:
