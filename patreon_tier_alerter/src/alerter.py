@@ -3,6 +3,7 @@ import requests
 from html.parser import HTMLParser
 import time
 import boto3
+from twilio.rest import Client
 import os
 
 # --- HTML Structure Assumptions (to be filled/verified by inspection) ---
@@ -215,6 +216,46 @@ def send_alerts(alerts_to_send: list, sms_config: dict = None):
                     }
                 )
                 print(f"SMS sent for tier '{alert['tier_name']}' to {recipient_phone_number}! Message ID: {response.get('MessageId')}")
+            except Exception as e:
+                print(f"Error sending SMS for tier '{alert['tier_name']}': {e}")
+        print("--- SMS Sending Process Complete ---")
+    elif sms_config and sms_config.get("provider") == "twilio":
+        print("\n--- Attempting to send SMS alerts via Twilio ---")
+        account_sid = sms_config.get("twilio_account_sid")
+        auth_token = sms_config.get("twilio_auth_token")
+        from_number = sms_config.get("twilio_from_number")
+        recipient_phone_number = sms_config.get("recipient_phone_number")
+
+        placeholders_present = any([
+            account_sid == "YOUR_TWILIO_ACCOUNT_SID",
+            auth_token == "YOUR_TWILIO_AUTH_TOKEN",
+            from_number == "YOUR_TWILIO_PHONE_NUMBER (e.g., +15551234567)",
+            recipient_phone_number == "YOUR_RECIPIENT_PHONE_NUMBER (e.g., +11234567890)",
+        ])
+
+        if not all([account_sid, auth_token, from_number, recipient_phone_number]) or placeholders_present:
+            if not all([account_sid, auth_token, from_number, recipient_phone_number]):
+                print("Warning: SMS configuration for Twilio is incomplete. Missing one or more required fields.")
+            if placeholders_present:
+                print("Warning: SMS configuration contains placeholder values. Please update your config.json.")
+            return
+
+        try:
+            client = Client(account_sid, auth_token)
+        except Exception as e:
+            print(f"Error initializing Twilio client: {e}")
+            return
+
+        for alert in alerts_to_send:
+            message = (
+                f"Patreon Alert: Tier '{alert['tier_name']}' for creator '{alert['creator_name']}' "
+                f"is now available! Check at: {alert['url']}"
+            )
+            if len(message) > 320:
+                message = message[:317] + "..."
+            try:
+                sent = client.messages.create(body=message, from_=from_number, to=recipient_phone_number)
+                print(f"SMS sent for tier '{alert['tier_name']}' to {recipient_phone_number}! SID: {sent.sid}")
             except Exception as e:
                 print(f"Error sending SMS for tier '{alert['tier_name']}': {e}")
         print("--- SMS Sending Process Complete ---")

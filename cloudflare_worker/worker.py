@@ -81,7 +81,7 @@ async def send_sms_alerts_async(alerts_to_send: list, env: dict, client: httpx.A
         except Exception as e:
             print(f"Error sending SMS: {e}")
 
-async def on_fetch(request, env):
+async def main(request, env):
     """Entry point for the Cloudflare Worker."""
     config_text = env.get("CONFIG_JSON")
     if not config_text and hasattr(env, "KV_CONFIG"):
@@ -105,4 +105,4 @@ async def on_fetch(request, env):
 
 async def on_fetch(request, env, ctx):
     """Cloudflare Workers fetch handler."""
-    return await main(request, env, ctx)
+    return await main(request, env)
