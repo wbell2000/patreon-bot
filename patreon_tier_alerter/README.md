@@ -26,10 +26,12 @@ The Patreon Tier Alerter Bot is a Python application designed to monitor Patreon
     ```
 
 2.  **Install dependencies:**
-    Install the required Python packages using pip:
+    Install the required Python packages using pip for running the bot locally:
     ```bash
     pip install -r requirements.txt
     ```
+    These packages are only needed for local development. The Cloudflare
+    Worker runtime does not support installing arbitrary dependencies.
 
 ## Setup and Configuration
 
@@ -184,6 +186,8 @@ without managing your own server. You will need the [Wrangler CLI](https://devel
     ```
 
 The Worker uses an async HTTP client compatible with the runtime and cannot read local files. AWS SNS via `boto3` is **not** available; SMS must be sent through an HTTP API. At this time only basic scraping and alerting are supported.
+
+Because Workers cannot install packages during deployment, `requirements.txt` is only intended for running the bot locally.
 
 ## Important Notes / Limitations
 
