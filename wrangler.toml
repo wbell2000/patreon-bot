@@ -1,0 +1,7 @@
+name = "patreon-tier-alert-worker"
+main = "cloudflare_worker/worker.py"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["python_worker"]
+
+[build]
+command = "pip install -r patreon_tier_alerter/requirements.txt --target ./"
