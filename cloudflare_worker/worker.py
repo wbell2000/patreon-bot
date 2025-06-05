@@ -1,6 +1,6 @@
 import json
 import httpx
-from bs4 import BeautifulSoup
+from html.parser import HTMLParser
 from patreon_tier_alerter.src.alerter import check_tiers
 
 # Global cache used across invocations
@@ -16,31 +16,52 @@ async def scrape_patreon_page_async(creator_url: str, user_agent: str, client: h
         print(f"Error fetching URL {creator_url}: {e}")
         return None
 
+    class TierParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.tiers = []
+            self.current = None
+            self.in_btn_div = False
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "a" and attrs.get("data-tag") == "patron-checkout-continue-button":
+                aria_label = attrs.get("aria-label", "")
+                if not aria_label:
+                    return
+                tier_name = " ".join(aria_label.split()[:-1])
+                disabled = attrs.get("aria-disabled") == "true"
+                self.current = {"name": tier_name, "disabled": disabled, "button": ""}
+            elif self.current and tag == "div" and attrs.get("class") == "cm-oHFIQB":
+                self.in_btn_div = True
+
+        def handle_data(self, data):
+            if self.current and self.in_btn_div:
+                self.current["button"] += data.strip()
+
+        def handle_endtag(self, tag):
+            if tag == "div" and self.in_btn_div:
+                self.in_btn_div = False
+            elif tag == "a" and self.current:
+                text = self.current.get("button", "")
+                if self.current["disabled"] or text == "Sold Out":
+                    status = "sold_out"
+                elif text == "Join":
+                    status = "available"
+                else:
+                    status = "unknown"
+                if self.current["name"]:
+                    self.tiers.append({"name": self.current["name"], "status": status})
+                self.current = None
+
+    parser = TierParser()
     try:
-        soup = BeautifulSoup(resp.text, "html.parser")
+        parser.feed(resp.text)
     except Exception as e:
         print(f"Error parsing HTML from {creator_url}: {e}")
         return None
 
-    tiers_data = []
-    tier_buttons = soup.find_all('a', attrs={'data-tag': 'patron-checkout-continue-button'})
-    for button in tier_buttons:
-        aria_label = button.get('aria-label', '')
-        if not aria_label:
-            continue
-        tier_name = ' '.join(aria_label.split()[:-1])
-        is_disabled = button.get('aria-disabled') == 'true'
-        btn_div = button.find('div', class_='cm-oHFIQB')
-        button_text = btn_div.get_text(strip=True) if btn_div else ''
-        if is_disabled or button_text == 'Sold Out':
-            tier_status = 'sold_out'
-        elif button_text == 'Join':
-            tier_status = 'available'
-        else:
-            tier_status = 'unknown'
-        if tier_name:
-            tiers_data.append({'name': tier_name, 'status': tier_status})
-    return tiers_data
+    return parser.tiers
 
 async def send_sms_alerts_async(alerts_to_send: list, env: dict, client: httpx.AsyncClient):
     """Send SMS alerts using a generic HTTP API."""
