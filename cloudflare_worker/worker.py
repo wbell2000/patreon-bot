@@ -101,3 +101,8 @@ async def on_fetch(request, env):
             alerts.extend(new_alerts)
         await send_sms_alerts_async(alerts, env, client)
     return {"alerts": alerts}
+
+
+async def on_fetch(request, env, ctx):
+    """Cloudflare Workers fetch handler."""
+    return await main(request, env, ctx)
