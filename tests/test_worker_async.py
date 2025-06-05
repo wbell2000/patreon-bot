@@ -1,6 +1,6 @@
 import pytest
-import httpx
 import json
+import urllib.request
 
 from cloudflare_worker.worker import (
     scrape_patreon_page_async,
@@ -9,19 +9,26 @@ from cloudflare_worker.worker import (
 )
 
 @pytest.mark.asyncio
-async def test_scrape_patreon_page_async_parses_tier():
+async def test_scrape_patreon_page_async_parses_tier(monkeypatch):
     html = (
         '<a data-tag="patron-checkout-continue-button" '
         'aria-label="Cool Tier Join">'
         '<div class="cm-oHFIQB">Join</div></a>'
     )
 
-    async def handler(request: httpx.Request):
-        return httpx.Response(200, text=html)
+    class FakeResp:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return html.encode()
 
-    transport = httpx.MockTransport(handler)
-    async with httpx.AsyncClient(transport=transport) as client:
-        tiers = await scrape_patreon_page_async("http://example.com", "UA", client)
+    def fake_urlopen(req, timeout=10):
+        return FakeResp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    tiers = await scrape_patreon_page_async("http://example.com", "UA")
 
     assert tiers == [{"name": "Cool Tier", "status": "available"}]
 
@@ -29,20 +36,27 @@ async def test_scrape_patreon_page_async_parses_tier():
 async def test_send_sms_alerts_async_posts(monkeypatch):
     recorded = {}
 
-    async def handler(request: httpx.Request):
-        recorded["url"] = str(request.url)
-        recorded["json"] = json.loads(request.content.decode())
-        return httpx.Response(200)
+    class FakeResp:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def read(self):
+            return b""
 
-    transport = httpx.MockTransport(handler)
-    async with httpx.AsyncClient(transport=transport) as client:
-        env = {
-            "SMS_API_URL": "http://sms.local",
-            "SMS_API_TOKEN": "token",
-            "RECIPIENT_PHONE_NUMBER": "123",
-        }
-        alerts = [{"tier_name": "T", "creator_name": "C", "url": "u"}]
-        await send_sms_alerts_async(alerts, env, client)
+    def fake_urlopen(req, timeout=10):
+        recorded["url"] = req.full_url
+        recorded["json"] = json.loads(req.data.decode())
+        return FakeResp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    env = {
+        "SMS_API_URL": "http://sms.local",
+        "SMS_API_TOKEN": "token",
+        "RECIPIENT_PHONE_NUMBER": "123",
+    }
+    alerts = [{"tier_name": "T", "creator_name": "C", "url": "u"}]
+    await send_sms_alerts_async(alerts, env)
 
     assert recorded["url"] == "http://sms.local"
     assert recorded["json"]["to"] == "123"
