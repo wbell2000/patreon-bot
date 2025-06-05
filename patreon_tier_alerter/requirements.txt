@@ -3,3 +3,4 @@ boto3
 pytest
 httpx
 pytest-asyncio
+twilio
