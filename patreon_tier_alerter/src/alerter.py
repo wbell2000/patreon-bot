@@ -159,11 +159,18 @@ def send_alerts(alerts_to_send: list, sms_config: dict = None):
         aws_region = sms_config.get("aws_region")
         recipient_phone_number = sms_config.get("recipient_phone_number")
 
-        if not all([aws_access_key_id, aws_secret_access_key, aws_region, recipient_phone_number]):
-            print("Warning: SMS configuration for AWS SNS is incomplete. Missing one or more of: Access Key ID, Secret Access Key, Region, or Recipient Phone Number. Cannot send SMS.")
-            # Replace placeholder values with a more specific warning.
-            if "YOUR_AWS_ACCESS_KEY_ID" in [aws_access_key_id, aws_secret_access_key, aws_region, recipient_phone_number]:
-                 print("Warning: SMS configuration contains placeholder values. Please update your config.json.")
+        placeholders_present = any([
+            aws_access_key_id == "YOUR_AWS_ACCESS_KEY_ID",
+            aws_secret_access_key == "YOUR_AWS_SECRET_ACCESS_KEY",
+            aws_region == "YOUR_AWS_REGION",
+            recipient_phone_number == "YOUR_RECIPIENT_PHONE_NUMBER",
+        ])
+
+        if not all([aws_access_key_id, aws_secret_access_key, aws_region, recipient_phone_number]) or placeholders_present:
+            if not all([aws_access_key_id, aws_secret_access_key, aws_region, recipient_phone_number]):
+                print("Warning: SMS configuration for AWS SNS is incomplete. Missing one or more of: Access Key ID, Secret Access Key, Region, or Recipient Phone Number. Cannot send SMS.")
+            if placeholders_present:
+                print("Warning: SMS configuration contains placeholder values. Please update your config.json.")
             return
 
         try:
@@ -239,7 +246,13 @@ def main():
     print(f"User-Agent: {user_agent}")
     if sms_settings_from_config and sms_settings_from_config.get('provider'):
         print(f"SMS alerts configured via: {sms_settings_from_config.get('provider')}")
-        if "YOUR_AWS_ACCESS_KEY_ID" in [sms_settings_from_config.get("aws_access_key_id", ""), sms_settings_from_config.get("aws_secret_access_key", ""), sms_settings_from_config.get("aws_region", ""), sms_settings_from_config.get("recipient_phone_number", "")]:
+        placeholders_present = any([
+            sms_settings_from_config.get("aws_access_key_id") == "YOUR_AWS_ACCESS_KEY_ID",
+            sms_settings_from_config.get("aws_secret_access_key") == "YOUR_AWS_SECRET_ACCESS_KEY",
+            sms_settings_from_config.get("aws_region") == "YOUR_AWS_REGION",
+            sms_settings_from_config.get("recipient_phone_number") == "YOUR_RECIPIENT_PHONE_NUMBER",
+        ])
+        if placeholders_present:
             print("WARNING: SMS configuration contains placeholder values. SMS sending may fail until these are updated in config.json.")
     else:
         print("SMS alerts not configured or provider not specified.")
