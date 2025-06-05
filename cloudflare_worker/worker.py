@@ -12,6 +12,10 @@ try:  # noqa: E402 - ensure patching before importing urllib
 except Exception:  # pragma: no cover - patching is best-effort
     pass
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from patreon_tier_alerter.src.alerter import check_tiers
 
 # Global cache used across invocations
