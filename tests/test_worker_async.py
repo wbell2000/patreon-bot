@@ -2,7 +2,11 @@ import pytest
 import httpx
 import json
 
-from cloudflare_worker.worker import scrape_patreon_page_async, send_sms_alerts_async
+from cloudflare_worker.worker import (
+    scrape_patreon_page_async,
+    send_sms_alerts_async,
+    on_fetch,
+)
 
 @pytest.mark.asyncio
 async def test_scrape_patreon_page_async_parses_tier():
@@ -43,3 +47,10 @@ async def test_send_sms_alerts_async_posts(monkeypatch):
     assert recorded["url"] == "http://sms.local"
     assert recorded["json"]["to"] == "123"
     assert recorded["json"]["token"] == "token"
+
+
+@pytest.mark.asyncio
+async def test_on_fetch_returns_alerts(monkeypatch):
+    env = {"CONFIG_JSON": json.dumps({"creators": []})}
+    result = await on_fetch(None, env, None)
+    assert result == {"alerts": []}

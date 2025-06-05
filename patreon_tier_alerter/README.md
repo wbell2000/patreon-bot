@@ -184,10 +184,9 @@ without managing your own server. You will need the [Wrangler CLI](https://devel
     ```bash
     wrangler publish
     ```
+4.  Ensure your `wrangler.toml` includes `compatibility_flags = ["python_workers"]`.
 
-The Worker uses an async HTTP client compatible with the runtime and cannot read local files. AWS SNS via `boto3` is **not** available; SMS must be sent through an HTTP API. At this time only basic scraping and alerting are supported.
-
-Because Workers cannot install packages during deployment, `requirements.txt` is only intended for running the bot locally.
+The Worker uses an async HTTP client compatible with the runtime and cannot read local files. AWS SNS via `boto3` is **not** available; SMS must be sent through an HTTP API. Third-party Python packages are not supported, so only the standard library is available at runtime. `requirements.txt` is solely for running the bot locally.
 
 ## Important Notes / Limitations
 
