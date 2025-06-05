@@ -1,29 +1,34 @@
 import json
+import asyncio
+import urllib.request
 from html.parser import HTMLParser
 
 # Python workers run on Pyodide, which does not include third-party packages by
-# default. Patch HTTP libraries like `httpx` to use the runtime's fetch API if
-# available.
-try:  # noqa: E402 - ensure patching before importing httpx
+# default. Patch HTTP libraries to use the runtime's fetch API if available.
+try:  # noqa: E402 - ensure patching before importing urllib
     import pyodide_http
 
     pyodide_http.patch_all()
 except Exception:  # pragma: no cover - patching is best-effort
     pass
 
-import httpx
 from patreon_tier_alerter.src.alerter import check_tiers
 
 # Global cache used across invocations
 alerted_tiers_cache = {}
 
-async def scrape_patreon_page_async(creator_url: str, user_agent: str, client: httpx.AsyncClient):
+async def scrape_patreon_page_async(creator_url: str, user_agent: str):
     """Asynchronously fetch and parse a Patreon creator page."""
     headers = {"User-Agent": user_agent}
+
+    def _fetch() -> str:
+        req = urllib.request.Request(creator_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.read().decode()
+
     try:
-        resp = await client.get(creator_url, headers=headers, timeout=10)
-        resp.raise_for_status()
-    except httpx.HTTPError as e:
+        text = await asyncio.to_thread(_fetch)
+    except Exception as e:
         print(f"Error fetching URL {creator_url}: {e}")
         return None
 
@@ -67,14 +72,14 @@ async def scrape_patreon_page_async(creator_url: str, user_agent: str, client: h
 
     parser = TierParser()
     try:
-        parser.feed(resp.text)
+        parser.feed(text)
     except Exception as e:
         print(f"Error parsing HTML from {creator_url}: {e}")
         return None
 
     return parser.tiers
 
-async def send_sms_alerts_async(alerts_to_send: list, env: dict, client: httpx.AsyncClient):
+async def send_sms_alerts_async(alerts_to_send: list, env: dict):
     """Send SMS alerts using a generic HTTP API."""
     sms_url = env.get("SMS_API_URL")
     sms_token = env.get("SMS_API_TOKEN")
@@ -87,8 +92,15 @@ async def send_sms_alerts_async(alerts_to_send: list, env: dict, client: httpx.A
             f"is now available! Check at: {alert['url']}"
         )
         payload = {"to": phone, "token": sms_token, "message": message}
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            sms_url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
         try:
-            await client.post(sms_url, json=payload, timeout=10)
+            await asyncio.to_thread(urllib.request.urlopen, req, timeout=10)
         except Exception as e:
             print(f"Error sending SMS: {e}")
 
@@ -103,14 +115,13 @@ async def main(request, env):
     creators = config.get("creators", [])
     user_agent = config.get("user_agent", "Mozilla/5.0")
     alerts = []
-    async with httpx.AsyncClient() as client:
-        for creator in creators:
-            scraped = await scrape_patreon_page_async(creator.get("url"), user_agent, client)
-            if scraped is None:
-                continue
-            new_alerts = check_tiers(scraped, creator, alerted_tiers_cache)
-            alerts.extend(new_alerts)
-        await send_sms_alerts_async(alerts, env, client)
+    for creator in creators:
+        scraped = await scrape_patreon_page_async(creator.get("url"), user_agent)
+        if scraped is None:
+            continue
+        new_alerts = check_tiers(scraped, creator, alerted_tiers_cache)
+        alerts.extend(new_alerts)
+    await send_sms_alerts_async(alerts, env)
     return {"alerts": alerts}
 
 
