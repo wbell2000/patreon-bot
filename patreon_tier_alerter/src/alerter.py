@@ -303,8 +303,9 @@ def load_config(config_path="config/config.json"):
         return None
 
 if __name__ == '__main__':
-    # Adjusted path for running from src directory
-    config = load_config('../config/config.json')
-    # Remove or comment out all the previous test code.
-    # The if __name__ == '__main__': block should now simply call main().
+    # The if __name__ == '__main__' block should simply call main().
+    # Previous code attempted to load a configuration file here, which could
+    # trigger a spurious "file not found" warning when the script was executed
+    # from a different working directory. Configuration loading is already
+    # handled inside main(), so we only need to invoke it.
     main()
