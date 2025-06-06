@@ -19,7 +19,7 @@ export default {
     for (const creator of config.creators) {
       const tiers = await scrapePatreonTiers(creator.url, config.user_agent);
       if (!tiers) continue;
-      const alerts = await checkTiers(tiers, creator, env.PATREON_ALERT_CACHE);
+      const alerts = checkTiers(tiers, creator);
       if (alerts.length > 0) {
         await sendAlerts(alerts, config.sms_settings, env);
       }
@@ -61,25 +61,17 @@ async function scrapePatreonTiers(url, userAgent) {
 }
 
 // --- Tier Checker ---
-async function checkTiers(scrapedTiers, creator, alertCacheKV) {
-  const newlyAvailable = [];
+function checkTiers(scrapedTiers, creator) {
+  const available = [];
   const scrapedMap = {};
   scrapedTiers.forEach(t => scrapedMap[t.name.toLowerCase()] = t);
   for (const tierName of creator.tiers_to_watch) {
-    const cacheKey = `${creator.name}_${tierName}`;
     const found = scrapedMap[tierName.toLowerCase()];
     if (found && found.status === 'available') {
-      const alerted = await alertCacheKV.get(cacheKey);
-      if (!alerted) {
-        newlyAvailable.push({ creator_name: creator.name, tier_name: tierName, url: creator.url });
-        await alertCacheKV.put(cacheKey, '1');
-      }
-    } else {
-      // Reset alert cache if not available
-      await alertCacheKV.delete(cacheKey);
+      available.push({ creator_name: creator.name, tier_name: tierName, url: creator.url });
     }
   }
-  return newlyAvailable;
+  return available;
 }
 
 // --- Alert Sender (Twilio) ---
