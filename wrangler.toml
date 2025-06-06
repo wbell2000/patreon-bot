@@ -1,5 +1,18 @@
-name = "patreon-tier-alert-worker"
-main = "cloudflare_worker/worker.py"
-compatibility_date = "2024-01-01"
-compatibility_flags = ["python_workers"]
+name = "patreon-bot"
+main = "cloudflare_worker/src/worker.js"
+compatibility_date = "2024-05-01"
 
+[[kv_namespaces]]
+binding = "PATREON_CONFIG"
+id = "bf42453979e2496ab2a444f6739f55fb"
+
+[[kv_namespaces]]
+binding = "PATREON_ALERT_CACHE"
+id = "2404989491c74d2ea6e95b5f1dd93376"
+
+[triggers]
+crons = ["*/10 * * * *"] # every 10 minutes
+
+[observability]
+enabled = true
+head_sampling_rate = 1
