@@ -13,7 +13,7 @@
     {
       "name": "Bourbon Junkies",
       "url": "https://www.patreon.com/c/bourbonjunkies/membership",
-      "tiers_to_watch": ["Bourbon Junkie Alpha", "Bourbon Demi-Junkie", "Bourbon God", "Bourbon Addict"]
+      "tiers_to_watch": ["Bourbon Junkie Alpha", "Bourbon Demi-Junkie", "Bourbon God"]
     }
   ],
   "check_interval_seconds": 600,
