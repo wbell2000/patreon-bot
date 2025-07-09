@@ -73,22 +73,23 @@ You need to edit this file to tell the bot which creators and tiers to monitor. 
 
 ## SMS Alert Configuration
 
-The bot supports sending SMS alerts via AWS Simple Notification Service (SNS) or Twilio when a desired tier becomes available. To enable SMS alerts, you need to configure the `sms_settings` section in the `config/config.json` file.
+The bot supports sending SMS alerts via AWS Simple Notification Service (SNS), Twilio, or Textbelt when a desired tier becomes available. To enable SMS alerts, configure the `sms_settings` section in the `config/config.json` file.
+
+To use AWS SNS:
 
 ```json
 {
-  // ... other configurations ...
   "sms_settings": {
     "provider": "aws_sns",
     "aws_access_key_id": "YOUR_AWS_ACCESS_KEY_ID",
     "aws_secret_access_key": "YOUR_AWS_SECRET_ACCESS_KEY",
     "aws_region": "YOUR_AWS_REGION (e.g., us-east-1)",
-    "recipient_phone_number": "YOUR_RECIPIENT_PHONE_NUMBER (e.g., +11234567890)"
+    "recipient_phone_number": "+11234567890"
   }
 }
 ```
 
-To use Twilio instead of AWS SNS:
+To use Twilio:
 
 ```json
 {
@@ -102,17 +103,29 @@ To use Twilio instead of AWS SNS:
 }
 ```
 
+To use Textbelt:
+
+```json
+{
+  "sms_settings": {
+    "provider": "textbelt",
+    "textbelt_api_key": "YOUR_TEXTBELT_API_KEY",  // Use "textbelt" for free/test mode
+    "recipient_phone_number": "+15557654321"
+  }
+}
+```
+
 **Field Explanations:**
 
-*   `provider` (string): Specifies the SMS provider. Supported options are `"aws_sns"` and `"twilio"`.
-*   `aws_access_key_id` (string): Your AWS Access Key ID. This is part of the credentials for an AWS IAM (Identity and Access Management) user. You can generate these credentials in the AWS Management Console under IAM.
-*   `aws_secret_access_key` (string): Your AWS Secret Access Key. This is the other part of the credentials for an AWS IAM user. It's shown only once when you create an access key pair, so store it securely.
-*   `aws_region` (string): The AWS region where your SNS service is configured (e.g., "us-east-1", "eu-west-2"). This is necessary for the AWS SDK to send requests to the correct regional endpoint.
+*   `provider` (string): Specifies the SMS provider. Supported options are `"aws_sns"`, `"twilio"`, and `"textbelt"`.
+*   `aws_access_key_id` / `aws_secret_access_key` / `aws_region` (AWS SNS only): Your AWS credentials and region.
+*   `twilio_account_sid` / `twilio_auth_token` / `twilio_from_number` (Twilio only): Your Twilio API credentials and sender number.
+*   `textbelt_api_key` (Textbelt only): Your Textbelt API key. Use `"textbelt"` for a free test message (1 SMS/day/number).
 *   `recipient_phone_number` (string): The phone number to which the SMS alerts will be sent. It should be in E.164 format (e.g., `+11234567890`).
-*   `twilio_account_sid` / `twilio_auth_token` (strings, Twilio only): Your Twilio API credentials.
-*   `twilio_from_number` (string, Twilio only): The Twilio phone number to send messages from.
 
-**IMPORTANT:** Storing AWS credentials directly in `config.json` is convenient for personal use but is not recommended for production or shared environments. For better security, consider using environment variables or AWS IAM roles if deploying this script in an AWS environment.
+**Note:** The free Textbelt key (`"textbelt"`) is for testing and allows only one SMS per day per phone number. For production use, obtain a paid API key from [textbelt.com](https://textbelt.com/).
+
+You can switch between providers by changing the `provider` field in your config. All three are fully supported and none are removed.
 
 ### Testing SMS Alerts
 

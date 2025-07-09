@@ -259,10 +259,55 @@ def send_alerts(alerts_to_send: list, sms_config: dict = None):
             except Exception as e:
                 print(f"Error sending SMS for tier '{alert['tier_name']}': {e}")
         print("--- SMS Sending Process Complete ---")
+    elif sms_config and sms_config.get("provider") == "textbelt":
+        print("\n--- Attempting to send SMS alerts via Textbelt ---")
+        textbelt_api_key = sms_config.get("textbelt_api_key", "textbelt")
+        recipient_phone_number = sms_config.get("recipient_phone_number")
+
+        placeholders_present = any([
+            textbelt_api_key == "YOUR_TEXTBELT_API_KEY",
+            recipient_phone_number == "YOUR_RECIPIENT_PHONE_NUMBER",
+        ])
+
+        if not all([textbelt_api_key, recipient_phone_number]) or placeholders_present:
+            if not all([textbelt_api_key, recipient_phone_number]):
+                print("Warning: SMS configuration for Textbelt is incomplete. Missing API key or recipient phone number.")
+            if placeholders_present:
+                print("Warning: SMS configuration contains placeholder values. Please update your config.json.")
+            return
+
+        for alert in alerts_to_send:
+            message = (
+                f"Patreon Alert: Tier '{alert['tier_name']}' for creator '{alert['creator_name']}' "
+                f"is now available! Check at: {alert['url']}"
+            )
+            if len(message) > 320:
+                message = message[:317] + "..."
+            try:
+                resp = send_textbelt_sms(recipient_phone_number, message, textbelt_api_key)
+                if resp.get("success"):
+                    print(f"SMS sent for tier '{alert['tier_name']}' to {recipient_phone_number}! Textbelt ID: {resp.get('textId')}")
+                else:
+                    print(f"Error sending SMS for tier '{alert['tier_name']}': {resp.get('error', 'Unknown error')}")
+            except Exception as e:
+                print(f"Error sending SMS for tier '{alert['tier_name']}': {e}")
+        print("--- SMS Sending Process Complete ---")
     elif sms_config:
         print(f"SMS provider '{sms_config.get('provider')}' is configured but not supported. No SMS will be sent.")
     else:
         print("SMS configuration not provided. Skipping SMS alerts.")
+
+
+def send_textbelt_sms(phone, message, key="textbelt"):
+    """Send an SMS using the Textbelt API."""
+    import requests
+    payload = {
+        'phone': phone,
+        'message': message,
+        'key': key,
+    }
+    response = requests.post('https://textbelt.com/text', data=payload)
+    return response.json()
 
 
 def main():
