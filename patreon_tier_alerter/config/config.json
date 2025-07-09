@@ -19,10 +19,8 @@
   "check_interval_seconds": 600,
   "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   "sms_settings": {
-    "provider": "aws_sns",
-    "aws_access_key_id": "YOUR_AWS_ACCESS_KEY_ID",
-    "aws_secret_access_key": "YOUR_AWS_SECRET_ACCESS_KEY",
-    "aws_region": "YOUR_AWS_REGION (e.g., us-east-1)",
-    "recipient_phone_number": "+11234567890"
+    "provider": "textbelt",
+    "textbelt_api_key": "7dbf7fe303ae81d56ef7db246c8f61353009f91dLuuXjkQpU1WYnu5QWGK2D1r5A",
+    "recipient_phone_number": "+16023501188"
   }
 }
