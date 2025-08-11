@@ -1,0 +1,130 @@
+2025-08-11 17:28:40 - INFO - === Patreon Tier Alerter Bot Started ===
+2025-08-11 17:28:40 - INFO - Log directory: /home/ubuntu/patreon-bot/logs
+2025-08-11 17:28:40 - INFO - Log files: patreon_bot.log (main), sms_alerts.log (SMS), errors.log (errors)
+2025-08-11 17:28:40 - INFO - Starting Patreon Tier Alerter...
+2025-08-11 17:28:40 - INFO - Configuration loaded. Monitoring 3 creator(s).
+2025-08-11 17:28:40 - INFO - Check interval: 600 seconds.
+2025-08-11 17:28:40 - INFO - User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2025-08-11 17:28:40 - INFO - SMS alerts configured via: textbelt
+2025-08-11 17:28:40 - INFO - Starting new check cycle #1...
+2025-08-11 17:28:40 - INFO - CHECK CYCLE #1 - Monitoring 3 creators, Interval: 600s
+2025-08-11 17:28:40 - INFO - Checking creator: Drums and Drams at https://www.patreon.com/c/drumsanddrams/membership
+2025-08-11 17:28:41 - INFO - Successfully scraped 4 tier(s) for Drums and Drams.
+2025-08-11 17:28:41 - INFO - No new tier availabilities to report.
+2025-08-11 17:28:41 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:28:46 - INFO - Checking creator: Rare Bird 101 at https://www.patreon.com/c/rarebird101/membership
+2025-08-11 17:28:47 - INFO - Successfully scraped 9 tier(s) for Rare Bird 101.
+2025-08-11 17:28:47 - INFO - No new tier availabilities to report.
+2025-08-11 17:28:47 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:28:52 - INFO - Checking creator: Bourbon Junkies at https://www.patreon.com/c/bourbonjunkies/membership
+2025-08-11 17:28:53 - INFO - Successfully scraped 7 tier(s) for Bourbon Junkies.
+2025-08-11 17:28:53 - INFO - No new tier availabilities to report.
+2025-08-11 17:28:53 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:28:58 - INFO - Check cycle #1 complete.
+2025-08-11 17:28:58 - INFO - Next check in 10 minutes (at 2025-08-11 17:38:58).
+2025-08-11 17:30:43 - INFO - === Patreon Tier Alerter Bot Started ===
+2025-08-11 17:30:43 - INFO - Log directory: /home/ubuntu/patreon-bot/logs
+2025-08-11 17:30:43 - INFO - Log files: patreon_bot.log (main), sms_alerts.log (SMS), errors.log (errors)
+2025-08-11 17:30:43 - INFO - Starting Patreon Tier Alerter...
+2025-08-11 17:30:43 - INFO - Configuration loaded. Monitoring 3 creator(s).
+2025-08-11 17:30:43 - INFO - Check interval: 60 seconds.
+2025-08-11 17:30:43 - INFO - User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2025-08-11 17:30:43 - INFO - SMS alerts configured via: textbelt
+2025-08-11 17:30:43 - INFO - 🧪 SENDING TEST SMS IN DEV MODE 🧪
+2025-08-11 17:30:43 - INFO - --- !!! NEW TIER ALERTS !!! ---
+2025-08-11 17:30:43 - INFO - ALERT: Tier "TEST TIER" for creator "DEV TEST" is now available! Check at: https://example.com
+2025-08-11 17:30:43 - INFO - TIER STATUS - DEV TEST: TEST TIER -> available | URL: https://example.com
+2025-08-11 17:30:43 - INFO - --- !!! END OF ALERTS !!! ---
+2025-08-11 17:30:43 - INFO - --- Attempting to send SMS alerts via Textbelt ---
+2025-08-11 17:30:44 - INFO - SMS sent for tier 'TEST TIER' to +16023501188! Textbelt ID: 641991754933443900
+2025-08-11 17:30:44 - INFO - SMS ALERT SENT - Tier: TEST TIER, Creator: DEV TEST, Phone: +16023501188, Provider: textbelt
+2025-08-11 17:30:44 - INFO - --- SMS Sending Process Complete ---
+2025-08-11 17:30:44 - INFO - 🧪 TEST SMS SENT 🧪
+2025-08-11 17:30:44 - INFO - Starting new check cycle #1...
+2025-08-11 17:30:44 - INFO - CHECK CYCLE #1 - Monitoring 3 creators, Interval: 60s
+2025-08-11 17:30:44 - INFO - Checking creator: Drums and Drams at https://www.patreon.com/c/drumsanddrams/membership
+2025-08-11 17:30:44 - INFO - Successfully scraped 4 tier(s) for Drums and Drams.
+2025-08-11 17:30:44 - INFO - No new tier availabilities to report.
+2025-08-11 17:30:44 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:30:49 - INFO - Checking creator: Rare Bird 101 at https://www.patreon.com/c/rarebird101/membership
+2025-08-11 17:30:51 - INFO - Successfully scraped 9 tier(s) for Rare Bird 101.
+2025-08-11 17:30:51 - INFO - No new tier availabilities to report.
+2025-08-11 17:30:51 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:30:56 - INFO - Checking creator: Bourbon Junkies at https://www.patreon.com/c/bourbonjunkies/membership
+2025-08-11 17:30:56 - INFO - Successfully scraped 7 tier(s) for Bourbon Junkies.
+2025-08-11 17:30:56 - INFO - No new tier availabilities to report.
+2025-08-11 17:30:56 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:31:01 - INFO - Check cycle #1 complete.
+2025-08-11 17:31:01 - INFO - Next check in 1 minutes (at 2025-08-11 17:32:01).
+2025-08-11 17:32:01 - INFO - Starting new check cycle #2...
+2025-08-11 17:32:01 - INFO - CHECK CYCLE #2 - Monitoring 3 creators, Interval: 60s
+2025-08-11 17:32:01 - INFO - 🔄 Configuration updated, applying changes...
+2025-08-11 17:32:01 - INFO - CONFIG RELOADED - patreon_tier_alerter/config/config.json | Changes: creators: 3, interval: 600s, dev_mode: False
+2025-08-11 17:32:01 - INFO - ✅ Configuration updated: creators: 3, interval: 600s, dev_mode: False
+2025-08-11 17:32:01 - INFO - Checking creator: Drums and Drams at https://www.patreon.com/c/drumsanddrams/membership
+2025-08-11 17:32:02 - INFO - Successfully scraped 4 tier(s) for Drums and Drams.
+2025-08-11 17:32:02 - INFO - No new tier availabilities to report.
+2025-08-11 17:32:02 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:32:07 - INFO - Checking creator: Rare Bird 101 at https://www.patreon.com/c/rarebird101/membership
+2025-08-11 17:32:08 - INFO - Successfully scraped 9 tier(s) for Rare Bird 101.
+2025-08-11 17:32:08 - INFO - No new tier availabilities to report.
+2025-08-11 17:32:08 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:32:13 - INFO - Checking creator: Bourbon Junkies at https://www.patreon.com/c/bourbonjunkies/membership
+2025-08-11 17:32:14 - INFO - Successfully scraped 7 tier(s) for Bourbon Junkies.
+2025-08-11 17:32:14 - INFO - No new tier availabilities to report.
+2025-08-11 17:32:14 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:32:19 - INFO - Check cycle #2 complete.
+2025-08-11 17:32:19 - INFO - Next check in 10 minutes (at 2025-08-11 17:42:19).
+2025-08-11 17:35:07 - INFO - === Patreon Tier Alerter Bot Started ===
+2025-08-11 17:35:07 - INFO - Log directory: /home/ubuntu/patreon-bot/logs
+2025-08-11 17:35:07 - INFO - Log files: patreon_bot.log (main), sms_alerts.log (SMS), errors.log (errors)
+2025-08-11 17:35:07 - INFO - Starting Patreon Tier Alerter...
+2025-08-11 17:35:07 - INFO - Configuration loaded. Monitoring 3 creator(s).
+2025-08-11 17:35:07 - INFO - Check interval: 60 seconds.
+2025-08-11 17:35:07 - INFO - User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+2025-08-11 17:35:07 - INFO - SMS alerts configured via: textbelt
+2025-08-11 17:35:07 - INFO - 🧪 SENDING TEST SMS IN DEV MODE 🧪
+2025-08-11 17:35:07 - INFO - --- !!! NEW TIER ALERTS !!! ---
+2025-08-11 17:35:07 - INFO - ALERT: Tier "TEST TIER" for creator "DEV TEST" is now available! Check at: https://example.com
+2025-08-11 17:35:07 - INFO - TIER STATUS - DEV TEST: TEST TIER -> available | URL: https://example.com
+2025-08-11 17:35:07 - INFO - --- !!! END OF ALERTS !!! ---
+2025-08-11 17:35:07 - INFO - --- Attempting to send SMS alerts via Textbelt ---
+2025-08-11 17:35:08 - INFO - SMS sent for tier 'TEST TIER' to +16023501188! Textbelt ID: 646841754933707672
+2025-08-11 17:35:08 - INFO - SMS ALERT SENT - Tier: TEST TIER, Creator: DEV TEST, Phone: +16023501188, Provider: textbelt
+2025-08-11 17:35:08 - INFO - --- SMS Sending Process Complete ---
+2025-08-11 17:35:08 - INFO - 🧪 TEST SMS SENT 🧪
+2025-08-11 17:35:08 - INFO - Starting new check cycle #1...
+2025-08-11 17:35:08 - INFO - CHECK CYCLE #1 - Monitoring 3 creators, Interval: 60s
+2025-08-11 17:35:08 - INFO - Checking creator: Drums and Drams at https://www.patreon.com/c/drumsanddrams/membership
+2025-08-11 17:35:09 - INFO - Successfully scraped 4 tier(s) for Drums and Drams.
+2025-08-11 17:35:09 - INFO - No new tier availabilities to report.
+2025-08-11 17:35:09 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:35:14 - INFO - Checking creator: Rare Bird 101 at https://www.patreon.com/c/rarebird101/membership
+2025-08-11 17:35:15 - INFO - Successfully scraped 9 tier(s) for Rare Bird 101.
+2025-08-11 17:35:15 - INFO - No new tier availabilities to report.
+2025-08-11 17:35:15 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:35:20 - INFO - Checking creator: Bourbon Junkies at https://www.patreon.com/c/bourbonjunkies/membership
+2025-08-11 17:35:21 - INFO - Successfully scraped 7 tier(s) for Bourbon Junkies.
+2025-08-11 17:35:21 - INFO - No new tier availabilities to report.
+2025-08-11 17:35:21 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:35:26 - INFO - Check cycle #1 complete.
+2025-08-11 17:35:26 - INFO - Next check in 1 minutes (at 2025-08-11 17:36:26).
+2025-08-11 17:36:26 - INFO - Starting new check cycle #2...
+2025-08-11 17:36:26 - INFO - CHECK CYCLE #2 - Monitoring 3 creators, Interval: 60s
+2025-08-11 17:36:26 - INFO - 🔄 Configuration updated, applying changes...
+2025-08-11 17:36:26 - INFO - CONFIG RELOADED - patreon_tier_alerter/config/config.json | Changes: creators: 3, interval: 600s, dev_mode: False
+2025-08-11 17:36:26 - INFO - ✅ Configuration updated: creators: 3, interval: 600s, dev_mode: False
+2025-08-11 17:36:26 - INFO - Checking creator: Drums and Drams at https://www.patreon.com/c/drumsanddrams/membership
+2025-08-11 17:36:28 - INFO - Successfully scraped 4 tier(s) for Drums and Drams.
+2025-08-11 17:36:28 - INFO - No new tier availabilities to report.
+2025-08-11 17:36:28 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:36:33 - INFO - Checking creator: Rare Bird 101 at https://www.patreon.com/c/rarebird101/membership
+2025-08-11 17:36:33 - INFO - Successfully scraped 9 tier(s) for Rare Bird 101.
+2025-08-11 17:36:33 - INFO - No new tier availabilities to report.
+2025-08-11 17:36:33 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:36:38 - INFO - Checking creator: Bourbon Junkies at https://www.patreon.com/c/bourbonjunkies/membership
+2025-08-11 17:36:39 - INFO - Successfully scraped 7 tier(s) for Bourbon Junkies.
+2025-08-11 17:36:39 - INFO - No new tier availabilities to report.
+2025-08-11 17:36:39 - INFO - Waiting 5 seconds before next creator...
+2025-08-11 17:36:44 - INFO - Check cycle #2 complete.
+2025-08-11 17:36:44 - INFO - Next check in 10 minutes (at 2025-08-11 17:46:44).

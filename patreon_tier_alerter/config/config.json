@@ -20,7 +20,13 @@
   "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   "sms_settings": {
     "provider": "textbelt",
-    "textbelt_api_key": "7dbf7fe303ae81d56ef7db246c8f61353009f91dLuuXjkQpU1WYnu5QWGK2D1r5A",
+    "textbelt_api_key": "0a6a30bf194085c47ba485837cdc9060f4cbc80fpUBQTewysCxZBuhvOyYSeRZCm",
     "recipient_phone_number": "+16023501188"
+  },
+  "dev_mode": {
+    "enabled": false,
+    "verbose_logging": false,
+    "test_sms": false,
+    "fast_check_interval": 60
   }
 }
