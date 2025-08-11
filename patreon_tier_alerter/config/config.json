@@ -22,5 +22,11 @@
     "provider": "textbelt",
     "textbelt_api_key": "TEXTBELT_KEY_REDACTED",
     "recipient_phone_number": "+16023501188"
+  },
+  "dev_mode": {
+    "enabled": false,
+    "verbose_logging": false,
+    "test_sms": false,
+    "fast_check_interval": 60
   }
 }
