@@ -3,11 +3,16 @@ import requests
 from html.parser import HTMLParser
 import time
 import boto3
-from twilio.rest import Client
 import os
 import logging
 import logging.handlers
 from datetime import datetime
+try:
+    from twilio.rest import Client
+    TWILIO_AVAILABLE = True
+except ImportError:
+    TWILIO_AVAILABLE = False
+    Client = None
 
 # --- HTML Structure Assumptions (to be filled/verified by inspection) ---
 # Tier container selector: e.g., 'div[data-testid="tier-card"]' (This is a guess, common pattern for cards)
@@ -369,6 +374,10 @@ def send_alerts(alerts_to_send: list, sms_config: dict = None):
                 print("Warning: SMS configuration contains placeholder values. Please update your config.json.")
             return
 
+        if not TWILIO_AVAILABLE:
+            print("Twilio package not available. Skipping Twilio SMS.")
+            return
+            
         try:
             client = Client(account_sid, auth_token)
         except Exception as e:
