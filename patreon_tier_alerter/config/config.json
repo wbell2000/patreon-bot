@@ -16,7 +16,13 @@
   "sms_settings": {
     "provider": "textbelt",
     "textbelt_api_key": "YOUR_TEXTBELT_API_KEY",
-    "recipient_phone_number": "+15555550123"
+    "recipient_phone_number": "+15555550123",
+    "twilio_account_sid": "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "twilio_auth_token": "DUMMY_TWILIO_AUTH_TOKEN",
+    "twilio_from_number": "+15555550111",
+    "aws_access_key_id": "DUMMY_AWS_ACCESS_KEY_ID",
+    "aws_secret_access_key": "DUMMY_AWS_SECRET_ACCESS_KEY",
+    "aws_region": "us-east-1"
   },
   "dev_mode": {
     "enabled": false,

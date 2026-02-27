@@ -19,9 +19,13 @@ This runbook executes Phase 2 of the sync/cleanup program:
 Rotate and replace all credentials ever committed in this repository:
 
 - Twilio account/auth credentials
-- Textbelt API key(s)
 - AWS credentials used for SNS
 - Any other secrets found in committed config snapshots
+
+Current exception (2026-02-27):
+
+- Textbelt key rotation is deferred (operator constraint).
+- Keep Textbelt provider active, but ensure Twilio/AWS values in tracked/runtime config are dummy placeholders.
 
 Replacement policy:
 
