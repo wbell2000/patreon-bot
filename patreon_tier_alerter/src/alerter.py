@@ -6,6 +6,7 @@ import boto3
 import os
 import logging
 import logging.handlers
+import re
 from datetime import datetime
 try:
     from twilio.rest import Client
@@ -25,6 +26,7 @@ except ImportError:
 # -------------------------------------------------------------------------
 
 alerted_tiers_cache = {} # Global cache for alerted tiers
+STATUS_PRIORITY = {"available": 3, "sold_out": 2, "unknown": 1}
 
 class LoggerManager:
     """Manages comprehensive logging with file rotation and multiple log levels."""
@@ -134,6 +136,165 @@ class LoggerManager:
 # Global logger instance
 logger_manager = LoggerManager()
 
+def _to_int_or_none(value):
+    """Best-effort conversion for numeric JSON fields."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip().lower()
+        if stripped in ("", "null", "none"):
+            return None
+        if stripped.lstrip("-").isdigit():
+            try:
+                return int(stripped)
+            except ValueError:
+                return None
+    return None
+
+
+def _tier_status_from_attributes(attributes: dict) -> str:
+    """Derive tier status from Patreon reward capacity fields."""
+    remaining = _to_int_or_none(attributes.get("remaining"))
+    user_limit = _to_int_or_none(attributes.get("user_limit", attributes.get("userLimit")))
+    patron_count = _to_int_or_none(attributes.get("patron_count", attributes.get("patronCount")))
+    published = attributes.get("published")
+
+    if remaining is not None:
+        return "available" if remaining > 0 else "sold_out"
+    if user_limit is not None and patron_count is not None:
+        return "available" if patron_count < user_limit else "sold_out"
+    if published is False:
+        return "sold_out"
+    return "unknown"
+
+
+def _merge_tiers(existing_tiers: dict, candidate_tier: dict):
+    """Merge a candidate tier preferring stronger status certainty."""
+    tier_name = candidate_tier.get("name", "").strip()
+    if not tier_name:
+        return
+    tier_key = tier_name.lower()
+
+    current = existing_tiers.get(tier_key)
+    if not current:
+        existing_tiers[tier_key] = candidate_tier
+        return
+
+    current_priority = STATUS_PRIORITY.get(current.get("status", "unknown"), 1)
+    candidate_priority = STATUS_PRIORITY.get(candidate_tier.get("status", "unknown"), 1)
+    if candidate_priority > current_priority:
+        existing_tiers[tier_key] = candidate_tier
+
+
+def _collect_reward_tiers_from_node(node, tier_map: dict):
+    """Recursively collect Patreon rewards from a decoded JSON structure."""
+    if isinstance(node, dict):
+        if node.get("type") == "reward":
+            attributes = node.get("attributes", {})
+            if isinstance(attributes, dict):
+                tier_name = (attributes.get("title") or "").strip()
+                if tier_name:
+                    _merge_tiers(
+                        tier_map,
+                        {"name": tier_name, "status": _tier_status_from_attributes(attributes)},
+                    )
+
+        for value in node.values():
+            _collect_reward_tiers_from_node(value, tier_map)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_reward_tiers_from_node(item, tier_map)
+
+
+def _extract_campaign_id(response_text: str):
+    """Extract Patreon campaign ID from HTML payload."""
+    patterns = [
+        r"/api/campaigns/(\d+)",
+        r'"id":"(\d+)","type":"campaign"',
+        r'\\"id\\":\\"(\d+)\\",\\"type\\":\\"campaign\\"',
+        r"campaign/(\d+)/",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, response_text)
+        if match:
+            return match.group(1)
+    return None
+
+
+def _extract_tiers_from_campaign_api(campaign_id: str, headers: dict, verbose: bool = False):
+    """Fetch reward tiers from Patreon campaign API."""
+    api_url = f"https://www.patreon.com/api/campaigns/{campaign_id}?include=rewards"
+    try:
+        response = requests.get(api_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        payload = response.json()
+    except (requests.exceptions.RequestException, ValueError) as e:
+        if verbose:
+            print(f"  [WARN] Campaign API fetch failed for {campaign_id}: {e}")
+        return None
+
+    tier_map = {}
+    _collect_reward_tiers_from_node(payload, tier_map)
+    tiers = list(tier_map.values())
+    if verbose:
+        print(f"  [INFO] Campaign API tiers found: {len(tiers)}")
+    return tiers
+
+
+def _extract_tiers_from_embedded_payload(response_text: str, verbose: bool = False):
+    """Extract reward tiers from embedded JSON blobs in Patreon HTML."""
+    tier_map = {}
+
+    next_data_match = re.search(
+        r'<script[^>]+id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+        response_text,
+        re.DOTALL,
+    )
+    if next_data_match:
+        try:
+            payload = json.loads(next_data_match.group(1))
+            _collect_reward_tiers_from_node(payload, tier_map)
+        except json.JSONDecodeError as e:
+            if verbose:
+                print(f"  [WARN] __NEXT_DATA__ decode failed: {e}")
+
+    # Fallback for pages that stream escaped JSON chunks via self.__next_f.
+    normalized = response_text.replace('\\"', '"').replace("\\/", "/")
+    for match in re.finditer(r'"type":"reward"', normalized):
+        window = normalized[match.start():match.start() + 8000]
+        title_match = re.search(r'"title":"([^"]+)"', window)
+        if not title_match:
+            continue
+
+        remaining_match = re.search(r'"remaining":(null|-?\d+)', window)
+        user_limit_match = re.search(r'"(?:user_limit|userLimit)":(null|-?\d+)', window)
+        patron_count_match = re.search(r'"(?:patron_count|patronCount)":(null|-?\d+)', window)
+        published_match = re.search(r'"published":(true|false)', window)
+
+        attributes = {
+            "title": title_match.group(1),
+            "remaining": remaining_match.group(1) if remaining_match else None,
+            "user_limit": user_limit_match.group(1) if user_limit_match else None,
+            "patron_count": patron_count_match.group(1) if patron_count_match else None,
+            "published": (
+                None
+                if not published_match
+                else published_match.group(1) == "true"
+            ),
+        }
+        _merge_tiers(
+            tier_map,
+            {"name": attributes["title"], "status": _tier_status_from_attributes(attributes)},
+        )
+
+    tiers = list(tier_map.values())
+    if verbose:
+        print(f"  [INFO] Embedded payload tiers found: {len(tiers)}")
+    return tiers
+
+
 def scrape_patreon_page(creator_url: str, user_agent: str, verbose: bool = False):
     """Fetches a Patreon creator's page, parses it, and extracts tier information.
 
@@ -162,6 +323,20 @@ def scrape_patreon_page(creator_url: str, user_agent: str, verbose: bool = False
     except requests.exceptions.RequestException as e:
         print(f"Error fetching URL {creator_url}: {e}")
         return None
+
+    campaign_id = _extract_campaign_id(response.text)
+    if campaign_id:
+        if verbose:
+            print(f"  [INFO] Campaign ID: {campaign_id}")
+        api_tiers = _extract_tiers_from_campaign_api(campaign_id, headers, verbose=verbose)
+        if api_tiers:
+            return api_tiers
+    elif verbose:
+        print("  [WARN] Campaign ID not found in page payload.")
+
+    embedded_tiers = _extract_tiers_from_embedded_payload(response.text, verbose=verbose)
+    if embedded_tiers:
+        return embedded_tiers
 
     class TierParser(HTMLParser):
         def __init__(self, verbose=False):
@@ -598,6 +773,29 @@ def main():
                 logging.error(f"Scraping failed for {creator_name} (returned None). Skipping tier check for this creator.")
             else:
                 logging.info(f"Successfully scraped {len(scraped_tiers)} tier(s) for {creator_name}.")
+                watched_tiers = creator_config.get('tiers_to_watch', [])
+                scraped_map = {
+                    tier.get("name", "").lower(): tier.get("status", "unknown")
+                    for tier in scraped_tiers
+                    if tier.get("name")
+                }
+                watched_seen = sum(1 for tier_name in watched_tiers if tier_name.lower() in scraped_map)
+                watched_available = sum(
+                    1 for tier_name in watched_tiers if scraped_map.get(tier_name.lower()) == "available"
+                )
+                status_counts = {}
+                for tier in scraped_tiers:
+                    status = tier.get("status", "unknown")
+                    status_counts[status] = status_counts.get(status, 0) + 1
+                logging.info(
+                    f"TIER HEALTH - {creator_name}: watched_seen={watched_seen}/{len(watched_tiers)}, "
+                    f"watched_available={watched_available}, status_counts={status_counts}"
+                )
+                if watched_tiers and watched_seen == 0:
+                    logging.warning(
+                        f"TIER HEALTH WARNING - {creator_name}: none of the watched tiers were found in scrape output."
+                    )
+
                 newly_available_alerts = check_tiers(scraped_tiers, creator_config, alerted_tiers_cache)
                 send_alerts(newly_available_alerts, sms_config=sms_settings_from_config)
             
