@@ -458,18 +458,27 @@ def main():
     """Main function to run the Patreon Tier Alerter bot."""
     logging.info("Starting Patreon Tier Alerter...")
 
-    # Update these paths to point to the correct location
-    config_path_primary = "patreon_tier_alerter/config/config.json"
-    config_path_secondary = "../patreon_tier_alerter/config/config.json" # For running directly from src
-    
-    # Initialize config manager with hot-reload capability
-    config_manager = ConfigManager(config_path_primary)
-    config = config_manager.load_config(force_reload=True)
-    
-    if config is None:
-        logging.warning(f"Attempting to load config from alternative path: {config_path_secondary}")
-        config_manager = ConfigManager(config_path_secondary)
+    # Config loading precedence:
+    # 1) explicit env override, 2) running from src/, 3) running from repo root
+    config_candidates = []
+    env_config_path = os.getenv("PATREON_CONFIG_PATH", "").strip()
+    if env_config_path:
+        config_candidates.append(env_config_path)
+    config_candidates.extend([
+        "../config/config.json",
+        "patreon_tier_alerter/config/config.json",
+    ])
+
+    config = None
+    config_manager = None
+    for idx, candidate_path in enumerate(config_candidates):
+        if idx > 0:
+            logging.warning(f"Attempting to load config from alternative path: {candidate_path}")
+        config_manager = ConfigManager(candidate_path)
         config = config_manager.load_config(force_reload=True)
+        if config is not None:
+            logging.info(f"Loaded configuration from: {candidate_path}")
+            break
 
     if config is None:
         logging.error("Error: Configuration could not be loaded. Exiting.")

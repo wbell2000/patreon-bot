@@ -1,2 +1,8 @@
-config/
+/config/
 venv/
+node_modules/
+.wrangler/state/
+logs/
+patreon_tier_alerter/src/logs/
+*.log
+!patreon_tier_alerter/config/config.example.json
